@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\TournamentRegistrationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class TournamentRegistration extends Model
+{
+    /** @use HasFactory<TournamentRegistrationFactory> */
+    use HasFactory;
+
+    protected $fillable = [
+        'tournament_id',
+        'user_id',
+        'seeding_position',
+        'status',
+        'checked_in_at',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'checked_in_at' => 'datetime',
+        ];
+    }
+
+    public function tournament(): BelongsTo
+    {
+        return $this->belongsTo(Tournament::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}
