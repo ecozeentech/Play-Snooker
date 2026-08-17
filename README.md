@@ -46,6 +46,10 @@ php artisan reverb:start          # WebSocket server for live odds / bracket upd
 npm run dev                       # Vite dev server with HMR
 ```
 
+### Deploying
+
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for a full step-by-step guide to deploying this app on **Hostinger Business shared hosting** (SSH + Git, no Redis/Node/persistent processes required), including a ready-to-copy [`.env.hostinger.example`](.env.hostinger.example) production environment template.
+
 ### Tests
 
 ```bash
