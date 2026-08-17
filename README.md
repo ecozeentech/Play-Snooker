@@ -32,7 +32,7 @@ php artisan serve
 
 Seeding creates:
 
-- An admin user: `admin@playsnooker.bet` / `password` (`is_admin = true`, access `/admin`).
+- An admin user: `admin` / `pass` (`is_admin = true`, access `/admin`).
 - The default shop catalog (cues, boosters, table skins, avatar frames).
 - Default achievements, currencies and payment-gateway system settings.
 - In `local`/`testing` environments, 16 demo players, a demo tournament, and a live demo match.
