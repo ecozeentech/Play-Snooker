@@ -20,6 +20,7 @@ class Product extends Model
         'price',
         'currency',
         'stats_bonus',
+        'appearance',
         'duration_minutes',
         'is_giftable',
         'is_tradeable',
@@ -31,10 +32,28 @@ class Product extends Model
         return [
             'price' => 'decimal:2',
             'stats_bonus' => 'array',
+            'appearance' => 'array',
             'is_giftable' => 'boolean',
             'is_tradeable' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    /**
+     * Default cue appearance used when a cue product doesn't define its
+     * own custom colors (e.g. legacy seeded cues created before this
+     * feature existed).
+     */
+    public const DEFAULT_CUE_APPEARANCE = [
+        'shaft_color' => '#c1935c',
+        'wrap_color' => '#4a301d',
+        'tip_color' => '#2b6cb0',
+        'butt_color' => '#1f140c',
+    ];
+
+    public function cueAppearance(): array
+    {
+        return array_merge(self::DEFAULT_CUE_APPEARANCE, $this->appearance ?? []);
     }
 
     public function inventoryItems(): HasMany

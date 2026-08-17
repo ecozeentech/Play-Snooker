@@ -1,4 +1,5 @@
 import { PoolEngine } from './engine';
+import { toggleFullscreen, isFullscreen } from './fullscreen';
 
 /**
  * Wires the PoolEngine up to a live 1v1 match page. Turn state and frame
@@ -13,7 +14,7 @@ import { PoolEngine } from './engine';
  * This still satisfies turn-based multiplayer with WebSocket-driven live
  * odds/score updates, which is what the betting platform depends on.
  */
-window.matchGame = function matchGame({ matchId, player1Id, player2Id, currentUserId, initialFrame }) {
+window.matchGame = function matchGame({ matchId, player1Id, player2Id, currentUserId, initialFrame, cues = [] }) {
     return {
         matchId,
         player1Id,
@@ -25,6 +26,9 @@ window.matchGame = function matchGame({ matchId, player1Id, player2Id, currentUs
         shooterId: null,
         message: 'Waiting for match state…',
         oddsData: null,
+        cues,
+        selectedCueId: (cues.find((c) => c.equipped) ?? cues[0])?.id ?? 0,
+        isFullscreen: false,
 
         init() {
             this.shooterId = this.currentFrame % 2 === 1 ? this.player1Id : this.player2Id;
@@ -38,7 +42,13 @@ window.matchGame = function matchGame({ matchId, player1Id, player2Id, currentUs
                     onFoul: (reason) => { this.message = `Foul: ${reason}`; },
                 });
                 this.engine.rackBalls();
+                this.applySelectedCue();
             }
+
+            document.addEventListener('fullscreenchange', () => {
+                this.isFullscreen = isFullscreen();
+                setTimeout(() => this.engine?.resize(), 100);
+            });
 
             window.subscribeToMatch(this.matchId, {
                 onOdds: (event) => { this.oddsData = event.odds; },
@@ -49,6 +59,17 @@ window.matchGame = function matchGame({ matchId, player1Id, player2Id, currentUs
                     }
                 },
             });
+        },
+
+        applySelectedCue() {
+            const cue = this.cues.find((c) => c.id === this.selectedCueId);
+            if (cue && this.engine) {
+                this.engine.setCueAppearance(cue.appearance);
+            }
+        },
+
+        async toggleTableFullscreen() {
+            this.isFullscreen = await toggleFullscreen(this.$refs.tableWrapper);
         },
 
         handleBallsStopped(pottedIds) {

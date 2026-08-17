@@ -6,13 +6,15 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#0a1e2b">
         <meta name="vapid-public-key" content="{{ config('webpush.vapid.public_key') }}">
-        <meta name="description" content="Play Snooker &mdash; live betting, digital pool &amp; snooker matches, tournaments and a player-run marketplace.">
+        <meta name="description" content="{{ $branding->description() }}">
 
-        <title>{{ config('app.name', 'Play Snooker') }}</title>
+        <title>{{ $branding->name() }}</title>
 
         <!-- PWA -->
         <link rel="manifest" href="/manifest.json">
-        <link rel="apple-touch-icon" href="/icons/icon-192.png">
+        <link rel="icon" href="{{ $branding->faviconUrl() ?? '/favicon.ico' }}">
+        <link rel="apple-touch-icon" href="{{ $branding->logoUrl() ?? '/icons/icon-192.png' }}">
+        <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -65,10 +67,14 @@
                 {{ $slot }}
             </main>
 
-            <footer class="hidden lg:block border-t border-white/5 py-8 text-center text-xs text-baize-200/50">
-                &copy; {{ now()->year }} Play Snooker &middot; playsnooker.bet
+            <footer class="hidden lg:block border-t border-white/5 py-8 text-center text-xs text-baize-200/50 space-x-3">
+                <span>&copy; {{ now()->year }} {{ $branding->name() }}</span>
+                <a href="{{ route('about') }}" class="hover:text-gold-300">About</a>
+                <a href="{{ route('contact') }}" class="hover:text-gold-300">Contact</a>
             </footer>
         </div>
+
+        <x-ad-popup />
 
         <script>
             if ('serviceWorker' in navigator) {

@@ -26,6 +26,12 @@ class ProductFactory extends Factory
                 'booster' => ['xp_multiplier' => fake()->randomFloat(2, 1.1, 2.0)],
                 default => [],
             },
+            'appearance' => $type === 'cue' ? [
+                'shaft_color' => fake()->hexColor(),
+                'wrap_color' => fake()->hexColor(),
+                'tip_color' => fake()->hexColor(),
+                'butt_color' => fake()->hexColor(),
+            ] : null,
             'duration_minutes' => $type === 'booster' ? fake()->randomElement([30, 60, 120, 1440]) : null,
             'is_giftable' => true,
             'is_tradeable' => fake()->boolean(30),

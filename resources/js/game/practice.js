@@ -1,13 +1,14 @@
 import { PoolEngine } from './engine';
 import { planAiShot } from './ai';
+import { toggleFullscreen, isFullscreen } from './fullscreen';
 
 /**
  * Wires the PoolEngine up to the practice-mode page: solo play against an
  * adjustable-difficulty AI opponent. Exposed as an Alpine.js component
  * factory (`window.practiceGame`) so the Blade view can bind it directly
- * with `x-data="practiceGame()"`.
+ * with `x-data="practiceGame(cues)"`.
  */
-window.practiceGame = function practiceGame() {
+window.practiceGame = function practiceGame(cues = []) {
     return {
         difficulty: 'medium',
         turn: 'player',
@@ -16,6 +17,9 @@ window.practiceGame = function practiceGame() {
         aiScore: 0,
         engine: null,
         frameHistory: [],
+        cues,
+        selectedCueId: (cues.find((c) => c.equipped) ?? cues[0])?.id ?? 0,
+        isFullscreen: false,
 
         init() {
             const canvas = this.$refs.canvas;
@@ -27,12 +31,23 @@ window.practiceGame = function practiceGame() {
                 },
             });
             this.engine.rackBalls();
+            this.applySelectedCue();
 
-            window.addEventListener('resize', () => {
-                this.engine.resize();
-                this.engine.setupPockets();
-                this.engine.render();
+            document.addEventListener('fullscreenchange', () => {
+                this.isFullscreen = isFullscreen();
+                setTimeout(() => this.engine?.resize(), 100);
             });
+        },
+
+        applySelectedCue() {
+            const cue = this.cues.find((c) => c.id === this.selectedCueId);
+            if (cue) {
+                this.engine.setCueAppearance(cue.appearance);
+            }
+        },
+
+        async toggleTableFullscreen() {
+            this.isFullscreen = await toggleFullscreen(this.$refs.tableWrapper);
         },
 
         handleBallsStopped(pottedIds) {
@@ -90,6 +105,7 @@ window.practiceGame = function practiceGame() {
 
         newRack() {
             this.engine.rackBalls();
+            this.applySelectedCue();
             this.playerScore = 0;
             this.aiScore = 0;
             this.turn = 'player';

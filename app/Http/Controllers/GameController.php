@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\GameMatch;
+use App\Models\InventoryItem;
 use App\Models\MatchReplay;
+use App\Models\Product;
 use App\Services\MatchFlowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +19,41 @@ class GameController extends Controller
     {
         return view('game.practice', [
             'difficulties' => config('platform.game.ai_difficulties'),
+            'cues' => $this->availableCues($request),
         ]);
+    }
+
+    /**
+     * The default "House Cue" (always free/available) plus every cue the
+     * player owns in their inventory, each with the appearance data the
+     * canvas engine needs to render it distinctly.
+     */
+    private function availableCues(Request $request): array
+    {
+        $houseCue = [
+            'id' => 0,
+            'name' => 'House Cue',
+            'appearance' => Product::DEFAULT_CUE_APPEARANCE,
+            'equipped' => true,
+        ];
+
+        $owned = InventoryItem::query()
+            ->where('user_id', $request->user()->id)
+            ->whereHas('product', fn ($q) => $q->where('type', 'cue'))
+            ->with('product')
+            ->get()
+            ->map(fn (InventoryItem $item) => [
+                'id' => $item->product_id,
+                'name' => $item->product->name,
+                'appearance' => $item->product->cueAppearance(),
+                'equipped' => $item->is_equipped,
+            ]);
+
+        if ($owned->contains('equipped', true)) {
+            $houseCue['equipped'] = false;
+        }
+
+        return collect([$houseCue])->merge($owned)->values()->all();
     }
 
     public function lobby(): View
@@ -39,11 +75,14 @@ class GameController extends Controller
         ]);
     }
 
-    public function show(GameMatch $match): View
+    public function show(Request $request, GameMatch $match): View
     {
         $match->load('player1.profile', 'player2.profile', 'tournament');
 
-        return view('game.show', ['match' => $match]);
+        return view('game.show', [
+            'match' => $match,
+            'cues' => $this->availableCues($request),
+        ]);
     }
 
     /**

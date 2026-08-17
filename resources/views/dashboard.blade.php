@@ -108,12 +108,7 @@
                     @endforelse
                 </div>
 
-                @if ($sidebarAd)
-                    <a href="{{ $sidebarAd->redirect_url }}" target="_blank" class="glass-card block overflow-hidden" data-aos="fade-up" data-aos-delay="150">
-                        <img src="{{ $sidebarAd->image_url }}" alt="{{ $sidebarAd->title }}" class="w-full h-32 object-cover">
-                        <p class="p-3 text-sm font-medium">{{ $sidebarAd->title }}</p>
-                    </a>
-                @endif
+                <x-ad-banner placement="sidebar" data-aos="fade-up" data-aos-delay="150" />
             </div>
         </div>
     </div>

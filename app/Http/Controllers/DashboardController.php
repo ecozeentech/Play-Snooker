@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Advertisement;
 use App\Models\GameMatch;
 use App\Models\Tournament;
 use Illuminate\Http\Request;
@@ -37,14 +36,11 @@ class DashboardController extends Controller
             ->limit(5)
             ->get();
 
-        $sidebarAd = Advertisement::query()->active()->placement('sidebar')->inRandomOrder()->first();
-
         return view('dashboard', [
             'stats' => $stats,
             'recentBets' => $recentBets,
             'upcomingTournaments' => $upcomingTournaments,
             'liveMatches' => $liveMatches,
-            'sidebarAd' => $sidebarAd,
         ]);
     }
 }

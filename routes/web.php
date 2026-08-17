@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\AdClickController;
 use App\Http\Controllers\BetController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\GiftController;
 use App\Http\Controllers\HallOfFameController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ShopController;
@@ -18,6 +20,12 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/hall-of-fame', [HallOfFameController::class, 'index'])->name('hall-of-fame');
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/contact', [PageController::class, 'contact'])->name('contact');
+Route::post('/contact', [PageController::class, 'submitContact'])
+    ->middleware('throttle:6,1')
+    ->name('contact.submit');
+Route::get('/ads/{ad}/click', [AdClickController::class, 'redirect'])->name('ads.click');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

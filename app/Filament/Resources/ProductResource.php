@@ -31,6 +31,7 @@ class ProductResource extends Resource
                         'table_skin' => 'Table skin',
                         'avatar_frame' => 'Avatar frame',
                     ])
+                    ->live()
                     ->required(),
                 Forms\Components\Textarea::make('description')
                     ->columnSpanFull(),
@@ -43,8 +44,28 @@ class ProductResource extends Resource
                     ->prefix('$'),
                 Forms\Components\TextInput::make('currency')
                     ->required(),
-                Forms\Components\Textarea::make('stats_bonus')
+                Forms\Components\KeyValue::make('stats_bonus')
+                    ->label('Stat bonuses')
+                    ->helperText('e.g. aim: 5, control: 3, xp_multiplier: 1.5')
                     ->columnSpanFull(),
+                Forms\Components\Section::make('Cue appearance')
+                    ->description('Customize how this cue is rendered in the digital game engine.')
+                    ->visible(fn (Forms\Get $get) => $get('type') === 'cue')
+                    ->columns(4)
+                    ->schema([
+                        Forms\Components\ColorPicker::make('appearance.shaft_color')
+                            ->label('Shaft color')
+                            ->default('#c1935c'),
+                        Forms\Components\ColorPicker::make('appearance.wrap_color')
+                            ->label('Grip/wrap color')
+                            ->default('#4a301d'),
+                        Forms\Components\ColorPicker::make('appearance.tip_color')
+                            ->label('Tip color')
+                            ->default('#2b6cb0'),
+                        Forms\Components\ColorPicker::make('appearance.butt_color')
+                            ->label('Butt cap color')
+                            ->default('#1f140c'),
+                    ]),
                 Forms\Components\TextInput::make('duration_minutes')
                     ->numeric(),
                 Forms\Components\Toggle::make('is_giftable')
@@ -63,7 +84,11 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('type')
+                    ->badge()
                     ->searchable(),
+                Tables\Columns\ColorColumn::make('appearance.shaft_color')
+                    ->label('Cue color')
+                    ->placeholder('—'),
                 Tables\Columns\ImageColumn::make('image_url'),
                 Tables\Columns\TextColumn::make('price')
                     ->money()
@@ -89,7 +114,14 @@ class ProductResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('type')
+                    ->options([
+                        'cue' => 'Cue',
+                        'booster' => 'Booster',
+                        'table_skin' => 'Table skin',
+                        'avatar_frame' => 'Avatar frame',
+                    ]),
+                Tables\Filters\TernaryFilter::make('is_active'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -99,13 +131,6 @@ class ProductResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array

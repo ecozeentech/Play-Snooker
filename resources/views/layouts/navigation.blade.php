@@ -3,8 +3,12 @@
         <div class="flex justify-between h-16">
             <div class="flex items-center min-w-0">
                 <a href="{{ auth()->check() ? route('dashboard') : route('home') }}" class="flex items-center gap-2 shrink-0 group">
-                    <span class="text-2xl transition-transform group-hover:rotate-12">🎱</span>
-                    <span class="font-display text-lg font-bold tracking-wide bg-gradient-to-r from-gold-200 via-gold-300 to-gold-500 bg-clip-text text-transparent">Play Snooker</span>
+                    @if ($branding->logoUrl())
+                        <img src="{{ $branding->logoUrl() }}" alt="{{ $branding->name() }}" class="h-8 w-auto transition-transform group-hover:scale-105">
+                    @else
+                        <span class="text-2xl transition-transform group-hover:rotate-12">🎱</span>
+                    @endif
+                    <span class="font-display text-lg font-bold tracking-wide bg-gradient-to-r from-gold-200 via-gold-300 to-gold-500 bg-clip-text text-transparent">{{ $branding->name() }}</span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-1 ms-8">

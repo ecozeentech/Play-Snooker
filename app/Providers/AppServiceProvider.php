@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Services\PlatformBranding;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(PlatformBranding::class);
     }
 
     /**
@@ -28,5 +30,11 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute($limit)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Admin-editable branding (logo, title, description, about/contact
+        // info — see App\Filament\Pages\PlatformSettings) is available in
+        // every Blade view as `$branding` without each page needing to
+        // fetch it manually.
+        View::share('branding', $this->app->make(PlatformBranding::class));
     }
 }

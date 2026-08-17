@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Advertisement;
 use App\Models\GameMatch;
 use App\Models\Tournament;
 use App\Models\TournamentRegistration;
@@ -61,5 +62,9 @@ class DatabaseSeeder extends Seeder
             'status' => 'live',
             'started_at' => now(),
         ]);
+
+        Advertisement::factory()->create(['title' => 'Cue Masters Pro Shop', 'placement' => 'sidebar']);
+        Advertisement::factory()->create(['title' => 'Snooker World Championship Tickets', 'placement' => 'banner']);
+        Advertisement::factory()->create(['title' => 'Welcome Bonus: 100% Deposit Match', 'placement' => 'popup']);
     }
 }

@@ -6,9 +6,10 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="theme-color" content="#0a1e2b">
 
-        <title>{{ config('app.name', 'Play Snooker') }}</title>
+        <title>{{ $branding->name() }}</title>
 
         <link rel="manifest" href="/manifest.json">
+        <link rel="icon" href="{{ $branding->faviconUrl() ?? '/favicon.ico' }}">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -21,8 +22,12 @@
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-baize-felt bg-fixed px-4">
             <div class="ambient-glow" aria-hidden="true"></div>
             <a href="/" class="flex items-center gap-2">
-                <span class="text-4xl">🎱</span>
-                <span class="font-display text-2xl font-bold tracking-wide text-gold-300">Play Snooker</span>
+                @if ($branding->logoUrl())
+                    <img src="{{ $branding->logoUrl() }}" alt="{{ $branding->name() }}" class="h-10 w-auto">
+                @else
+                    <span class="text-4xl">🎱</span>
+                @endif
+                <span class="font-display text-2xl font-bold tracking-wide text-gold-300">{{ $branding->name() }}</span>
             </a>
 
             <div class="w-full sm:max-w-md mt-6 px-6 py-6 glass-panel">

@@ -14,6 +14,7 @@
             player2Id: {{ $match->player2_id ?? 'null' }},
             currentUserId: {{ auth()->id() ?? 'null' }},
             initialFrame: {{ $match->current_frame }},
+            cues: @js($cues),
         })"
     >
         <div class="lg:col-span-2 space-y-4">
@@ -26,9 +27,30 @@
                 evaluated), so `this.$refs.canvas` would be undefined and the
                 table would silently fail to render.
             --}}
-            <div class="glass-panel p-3 sm:p-6" x-show="isMyTurn">
-                <p class="text-center text-sm text-gold-200 mb-3" x-text="message"></p>
-                <canvas x-ref="canvas" class="w-full aspect-[16/9] rounded-xl touch-none select-none" style="touch-action: none;"></canvas>
+            <div class="glass-panel p-3 sm:p-6" x-show="isMyTurn" x-ref="tableWrapper" :class="isFullscreen && 'flex flex-col justify-center bg-baize-950'">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <p class="text-sm text-gold-200" x-text="message"></p>
+                    <select x-model.number="selectedCueId" @change="applySelectedCue()" class="form-input-dark min-h-[36px] text-xs w-auto">
+                        <template x-for="cue in cues" :key="cue.id">
+                            <option :value="cue.id" x-text="cue.name"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="relative">
+                    <canvas x-ref="canvas" class="w-full aspect-[16/9] rounded-xl touch-none select-none" style="touch-action: none;"></canvas>
+
+                    <button
+                        type="button"
+                        @click="toggleTableFullscreen()"
+                        title="Toggle fullscreen"
+                        class="absolute top-2 right-2 flex items-center justify-center h-10 w-10 rounded-full bg-black/40 text-white/80 hover:text-gold-300 hover:bg-black/60 backdrop-blur transition"
+                    >
+                        <svg x-show="!isFullscreen" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" /></svg>
+                        <svg x-show="isFullscreen" x-cloak class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V5m0 4H5m4 0L3 3m12 6V5m0 4h4m-4 0l6-6M9 15v4m0-4H5m4 0l-6 6m12-6v4m0-4h4m-4 0l6 6" /></svg>
+                    </button>
+                </div>
+
                 <div class="mt-3 flex justify-center">
                     <button type="button" class="btn-outline text-xs" @click="concedeFrame()">Concede this frame</button>
                 </div>

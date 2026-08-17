@@ -4,8 +4,10 @@
  * A self-contained 2D physics simulation for pool/snooker-style gameplay
  * rendered on an HTML5 Canvas. Handles realistic ball-to-ball collisions,
  * cushion rebounds, rolling friction, simple cue-ball "spin" (side/back
- * spin approximated as post-impact curl), pocketing detection, and
- * touch/mouse "drag to aim, pull back for power" controls.
+ * spin approximated as post-impact curl), pocketing detection, a modern
+ * aiming HUD (ghost-ball preview, power meter, angle readout, spin/
+ * "english" picker), customizable cue-stick appearance, and touch/mouse
+ * "drag to aim, pull back for power" controls.
  *
  * This engine intentionally has zero external dependencies so it can be
  * embedded directly in Blade views via Vite without pulling in a full 3D
@@ -21,6 +23,8 @@ const MIN_VELOCITY = 0.04; // Balls below this speed are considered stopped.
 const MAX_POWER_DISTANCE = 160; // Pixels of pull-back that yields max power.
 const MAX_SHOT_SPEED = 15;
 const RESTITUTION = 0.94; // Cushion bounce energy retention.
+const SPIN_WIDGET_RADIUS = 26; // On-canvas "english" picker widget.
+const SPIN_WIDGET_MARGIN = 18;
 
 export const BALL_COLORS = [
     '#f4f4f4', // 0: cue ball
@@ -33,10 +37,17 @@ export const BALL_COLORS = [
     '#151515', // 7: black (8-ball equivalent)
 ];
 
+export const DEFAULT_CUE_APPEARANCE = {
+    shaft_color: '#c1935c',
+    wrap_color: '#4a301d',
+    tip_color: '#2b6cb0',
+    butt_color: '#1f140c',
+};
+
 export class PoolEngine {
     /**
      * @param {HTMLCanvasElement} canvas
-     * @param {{onBallsStopped?: Function, onPot?: Function, onFoul?: Function}} callbacks
+     * @param {{onBallsStopped?: Function, onPot?: Function, onFoul?: Function, onAimChange?: Function}} callbacks
      */
     constructor(canvas, callbacks = {}) {
         this.canvas = canvas;
@@ -50,10 +61,14 @@ export class PoolEngine {
         this.animationFrame = null;
         this.shotInFlight = false;
         this.lastPottedIds = [];
+        this.cueAppearance = { ...DEFAULT_CUE_APPEARANCE };
+        this.spin = { x: 0, y: 0 }; // -1..1 on each axis (side spin, top/back spin).
+        this.adjustingSpin = false;
 
         this.resize();
         this.setupPockets();
         this.bindInput();
+        this.observeResize();
     }
 
     resize() {
@@ -84,6 +99,32 @@ export class PoolEngine {
         }
     }
 
+    /**
+     * Keeps the table crisp across window resizes, device rotation, and
+     * fullscreen toggles — anything that changes the canvas's laid-out
+     * size, not just the browser window (a plain `resize` listener misses
+     * container-driven changes like fullscreen or orientation flips).
+     */
+    observeResize() {
+        if (typeof ResizeObserver === 'undefined') return;
+
+        let lastWidth = this.width;
+        let lastHeight = this.height;
+
+        this.resizeObserver = new ResizeObserver(() => {
+            const rect = this.canvas.getBoundingClientRect();
+            if (Math.abs(rect.width - lastWidth) < 1 && Math.abs(rect.height - lastHeight) < 1) return;
+
+            lastWidth = rect.width;
+            lastHeight = rect.height;
+            this.resize();
+            this.setupPockets();
+            this.render();
+        });
+
+        this.resizeObserver.observe(this.canvas);
+    }
+
     setupPockets() {
         const { width, height } = this;
         const p = TABLE_PADDING;
@@ -95,6 +136,17 @@ export class PoolEngine {
             { x: width / 2, y: height - p + 6 },
             { x: width - p, y: height - p },
         ];
+    }
+
+    setCueAppearance(appearance) {
+        this.cueAppearance = { ...DEFAULT_CUE_APPEARANCE, ...appearance };
+        this.render();
+    }
+
+    setSpin(x, y) {
+        this.spin = { x: Math.max(-1, Math.min(1, x)), y: Math.max(-1, Math.min(1, y)) };
+        this.callbacks.onAimChange?.({ spin: this.spin });
+        this.render();
     }
 
     /**
@@ -154,21 +206,50 @@ export class PoolEngine {
         return this.balls.find((b) => b.isCue && !b.potted);
     }
 
+    spinWidgetCenter() {
+        return {
+            x: this.width - SPIN_WIDGET_MARGIN - SPIN_WIDGET_RADIUS,
+            y: SPIN_WIDGET_MARGIN + SPIN_WIDGET_RADIUS,
+        };
+    }
+
+    isWithinSpinWidget(point) {
+        const center = this.spinWidgetCenter();
+        return Math.hypot(point.x - center.x, point.y - center.y) <= SPIN_WIDGET_RADIUS + 6;
+    }
+
     bindInput() {
         const start = (point) => {
+            if (this.isWithinSpinWidget(point)) {
+                this.adjustingSpin = true;
+                this.updateSpinFromPoint(point);
+                return;
+            }
+
             if (this.shotInFlight || !this.cueBall) return;
             this.aiming = true;
             this.aimStart = point;
             this.aimCurrent = point;
+            this.callbacks.onAimChange?.({ aiming: true });
         };
 
         const move = (point) => {
+            if (this.adjustingSpin) {
+                this.updateSpinFromPoint(point);
+                return;
+            }
+
             if (!this.aiming) return;
             this.aimCurrent = point;
             this.render();
         };
 
         const end = () => {
+            if (this.adjustingSpin) {
+                this.adjustingSpin = false;
+                return;
+            }
+
             if (!this.aiming || !this.cueBall) {
                 this.aiming = false;
                 return;
@@ -181,12 +262,14 @@ export class PoolEngine {
             if (distance > 6) {
                 const angle = Math.atan2(dy, dx);
                 const power = (distance / MAX_POWER_DISTANCE) * MAX_SHOT_SPEED;
-                this.shoot(angle, power);
+                this.shoot(angle, power, this.spin.x);
             }
 
             this.aiming = false;
             this.aimStart = null;
             this.aimCurrent = null;
+            this.callbacks.onAimChange?.({ aiming: false });
+            this.render();
         };
 
         const toPoint = (e) => {
@@ -204,6 +287,16 @@ export class PoolEngine {
         this.canvas.addEventListener('touchstart', (e) => { e.preventDefault(); start(toPoint(e)); }, { passive: false });
         this.canvas.addEventListener('touchmove', (e) => { e.preventDefault(); move(toPoint(e)); }, { passive: false });
         this.canvas.addEventListener('touchend', (e) => { e.preventDefault(); end(); if (navigator.vibrate) navigator.vibrate(15); }, { passive: false });
+    }
+
+    updateSpinFromPoint(point) {
+        const center = this.spinWidgetCenter();
+        const dx = (point.x - center.x) / SPIN_WIDGET_RADIUS;
+        const dy = (point.y - center.y) / SPIN_WIDGET_RADIUS;
+        const magnitude = Math.hypot(dx, dy);
+        const clampScale = magnitude > 1 ? 1 / magnitude : 1;
+
+        this.setSpin(dx * clampScale, dy * clampScale);
     }
 
     /**
@@ -380,6 +473,54 @@ export class PoolEngine {
         return this.balls.filter((b) => !b.isCue && !b.potted);
     }
 
+    /**
+     * Casts a ray from the cue ball along the aim direction and returns the
+     * first object ball it would strike (if any) and the "ghost ball"
+     * position — where the cue ball's center would be at the moment of
+     * contact — powering the modern ghost-ball aiming aid.
+     */
+    findAimTarget(angle) {
+        const cue = this.cueBall;
+        if (!cue) return null;
+
+        const dirX = Math.cos(angle);
+        const dirY = Math.sin(angle);
+        let closest = null;
+
+        for (const ball of this.balls) {
+            if (ball.isCue || ball.potted) continue;
+
+            // Project the ball's center onto the aim ray to find the closest
+            // approach distance, then solve for where a ball of combined
+            // radius would first touch it along that ray.
+            const toBallX = ball.x - cue.x;
+            const toBallY = ball.y - cue.y;
+            const projection = toBallX * dirX + toBallY * dirY;
+            if (projection <= 0) continue;
+
+            const closestX = cue.x + dirX * projection;
+            const closestY = cue.y + dirY * projection;
+            const perpDistance = Math.hypot(ball.x - closestX, ball.y - closestY);
+            const combinedRadius = ball.radius + cue.radius;
+            if (perpDistance >= combinedRadius) continue;
+
+            const backOffset = Math.sqrt(Math.max(combinedRadius ** 2 - perpDistance ** 2, 0));
+            const contactDistance = projection - backOffset;
+            if (contactDistance < 0) continue;
+
+            if (!closest || contactDistance < closest.distance) {
+                closest = {
+                    ball,
+                    distance: contactDistance,
+                    ghostX: cue.x + dirX * contactDistance,
+                    ghostY: cue.y + dirY * contactDistance,
+                };
+            }
+        }
+
+        return closest;
+    }
+
     render() {
         const ctx = this.ctx;
         const { width, height } = this;
@@ -393,8 +534,22 @@ export class PoolEngine {
         ctx.fillStyle = felt;
         ctx.fillRect(0, 0, width, height);
 
-        // Wooden rail.
-        ctx.strokeStyle = '#4a301d';
+        // Faint diamond markers along the rail for a pro-table look.
+        ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        const diamondCount = 6;
+        for (let i = 1; i < diamondCount; i++) {
+            const x = TABLE_PADDING + (i * (width - TABLE_PADDING * 2)) / diamondCount;
+            ctx.beginPath();
+            ctx.arc(x, TABLE_PADDING - 10, 2, 0, Math.PI * 2);
+            ctx.arc(x, height - TABLE_PADDING + 10, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Wooden rail with a subtle gradient for depth.
+        const rail = ctx.createLinearGradient(0, 0, 0, height);
+        rail.addColorStop(0, '#5c4230');
+        rail.addColorStop(1, '#3a281b');
+        ctx.strokeStyle = rail;
         ctx.lineWidth = TABLE_PADDING;
         ctx.strokeRect(TABLE_PADDING / 2, TABLE_PADDING / 2, width - TABLE_PADDING, height - TABLE_PADDING);
 
@@ -407,81 +562,232 @@ export class PoolEngine {
         for (const pocket of this.pockets) {
             ctx.beginPath();
             ctx.arc(pocket.x, pocket.y, POCKET_RADIUS, 0, Math.PI * 2);
-            ctx.fillStyle = '#050505';
+            const pocketGradient = ctx.createRadialGradient(pocket.x, pocket.y, 2, pocket.x, pocket.y, POCKET_RADIUS);
+            pocketGradient.addColorStop(0, '#000000');
+            pocketGradient.addColorStop(1, '#1a1a1a');
+            ctx.fillStyle = pocketGradient;
             ctx.fill();
         }
 
-        // Aim guide.
-        if (this.aiming && this.cueBall && this.aimStart && this.aimCurrent) {
-            const cue = this.cueBall;
-            const dx = this.aimStart.x - this.aimCurrent.x;
-            const dy = this.aimStart.y - this.aimCurrent.y;
-            const distance = Math.min(Math.hypot(dx, dy), MAX_POWER_DISTANCE);
-            const angle = Math.atan2(dy, dx);
-
-            ctx.save();
-            ctx.strokeStyle = `rgba(227, 176, 43, ${0.4 + (distance / MAX_POWER_DISTANCE) * 0.5})`;
-            ctx.lineWidth = 2;
-            ctx.setLineDash([6, 6]);
-            ctx.beginPath();
-            ctx.moveTo(cue.x, cue.y);
-            ctx.lineTo(cue.x + Math.cos(angle) * 260, cue.y + Math.sin(angle) * 260);
-            ctx.stroke();
-
-            // Cue stick pulled back behind the ball.
-            ctx.setLineDash([]);
-            ctx.strokeStyle = '#c1935c';
-            ctx.lineWidth = 5;
-            ctx.beginPath();
-            ctx.moveTo(cue.x - Math.cos(angle) * (20 + distance), cue.y - Math.sin(angle) * (20 + distance));
-            ctx.lineTo(cue.x - Math.cos(angle) * (20 + distance * 0.35), cue.y - Math.sin(angle) * (20 + distance * 0.35));
-            ctx.stroke();
-            ctx.restore();
-        }
+        this.renderAimHud();
 
         // Balls with a simple lighting gradient for a glossy look.
         for (const ball of this.balls) {
             if (ball.potted) continue;
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y + 2, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(0,0,0,0.25)';
-            ctx.fill();
-
-            const gradient = ctx.createRadialGradient(
-                ball.x - ball.radius * 0.4,
-                ball.y - ball.radius * 0.4,
-                1,
-                ball.x,
-                ball.y,
-                ball.radius,
-            );
-            gradient.addColorStop(0, '#ffffff');
-            gradient.addColorStop(0.25, ball.color);
-            gradient.addColorStop(1, ball.color);
-
-            ctx.beginPath();
-            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.fill();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-            ctx.stroke();
-
-            if (!ball.isCue) {
-                ctx.fillStyle = '#fff';
-                ctx.font = `${ball.radius}px sans-serif`;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillText(String(ball.id), ball.x, ball.y);
-            }
-
-            ctx.restore();
+            this.renderBall(ball);
         }
+
+        this.renderSpinWidget();
+    }
+
+    renderBall(ball) {
+        const ctx = this.ctx;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y + 2, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fill();
+
+        const gradient = ctx.createRadialGradient(
+            ball.x - ball.radius * 0.4,
+            ball.y - ball.radius * 0.4,
+            1,
+            ball.x,
+            ball.y,
+            ball.radius,
+        );
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(0.25, ball.color);
+        gradient.addColorStop(1, ball.color);
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+        ctx.stroke();
+
+        if (!ball.isCue) {
+            ctx.fillStyle = '#fff';
+            ctx.font = `${ball.radius}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(ball.id), ball.x, ball.y);
+        } else if (Math.abs(this.spin.x) > 0.05 || Math.abs(this.spin.y) > 0.05) {
+            // Show the current "english" as a small dot offset on the cue ball itself.
+            ctx.beginPath();
+            ctx.arc(ball.x + this.spin.x * ball.radius * 0.5, ball.y + this.spin.y * ball.radius * 0.5, 2, 0, Math.PI * 2);
+            ctx.fillStyle = '#c94b3c';
+            ctx.fill();
+        }
+
+        ctx.restore();
+    }
+
+    /**
+     * Draws the modern aiming HUD: an extended dashed trajectory line, a
+     * translucent "ghost ball" at the predicted point of contact with a
+     * secondary line showing where the object ball would travel, a power
+     * meter, and a degree readout — plus the pulled-back cue stick itself,
+     * rendered using the equipped cue's custom colors.
+     */
+    renderAimHud() {
+        if (!this.aiming || !this.cueBall || !this.aimStart || !this.aimCurrent) return;
+
+        const ctx = this.ctx;
+        const cue = this.cueBall;
+        const dx = this.aimStart.x - this.aimCurrent.x;
+        const dy = this.aimStart.y - this.aimCurrent.y;
+        const distance = Math.min(Math.hypot(dx, dy), MAX_POWER_DISTANCE);
+        const angle = Math.atan2(dy, dx);
+        const powerPct = distance / MAX_POWER_DISTANCE;
+
+        const target = this.findAimTarget(angle);
+        const guideLength = target ? target.distance : 500;
+
+        ctx.save();
+
+        // Dashed aim guide up to the ghost-ball contact point (or off into
+        // the distance if nothing is in the way).
+        ctx.strokeStyle = `rgba(227, 176, 43, ${0.45 + powerPct * 0.5})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(cue.x, cue.y);
+        ctx.lineTo(cue.x + Math.cos(angle) * guideLength, cue.y + Math.sin(angle) * guideLength);
+        ctx.stroke();
+
+        if (target) {
+            // Ghost ball: translucent outline showing where the cue ball's
+            // center will be at the moment of impact.
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(target.ghostX, target.ghostY, cue.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(255,255,255,0.12)';
+            ctx.fill();
+
+            // Predicted travel direction of the object ball (line from its
+            // center through the impact point, extended outward).
+            const throughX = target.ball.x - target.ghostX;
+            const throughY = target.ball.y - target.ghostY;
+            const throughLen = Math.hypot(throughX, throughY) || 1;
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([3, 5]);
+            ctx.beginPath();
+            ctx.moveTo(target.ball.x, target.ball.y);
+            ctx.lineTo(target.ball.x + (throughX / throughLen) * 120, target.ball.y + (throughY / throughLen) * 120);
+            ctx.stroke();
+        }
+
+        // Cue stick pulled back behind the ball, rendered with the
+        // equipped cue's own colors for a personalized look.
+        ctx.setLineDash([]);
+        const pullback = 20 + distance;
+        const tipX = cue.x - Math.cos(angle) * pullback;
+        const tipY = cue.y - Math.sin(angle) * pullback;
+        const buttX = cue.x - Math.cos(angle) * (pullback + 130);
+        const buttY = cue.y - Math.sin(angle) * (pullback + 130);
+        const wrapX = cue.x - Math.cos(angle) * (pullback + 90);
+        const wrapY = cue.y - Math.sin(angle) * (pullback + 90);
+
+        // Shaft (tip -> wrap).
+        ctx.strokeStyle = this.cueAppearance.shaft_color;
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(wrapX, wrapY);
+        ctx.stroke();
+
+        // Tip (small colored cap at the striking end).
+        ctx.strokeStyle = this.cueAppearance.tip_color;
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(cue.x - Math.cos(angle) * (pullback - 6), cue.y - Math.sin(angle) * (pullback - 6));
+        ctx.stroke();
+
+        // Wrap/grip (wrap -> butt).
+        ctx.strokeStyle = this.cueAppearance.wrap_color;
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(wrapX, wrapY);
+        ctx.lineTo(buttX, buttY);
+        ctx.stroke();
+
+        // Butt cap.
+        ctx.fillStyle = this.cueAppearance.butt_color;
+        ctx.beginPath();
+        ctx.arc(buttX, buttY, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Power meter: small radial arc around the cue ball.
+        ctx.beginPath();
+        ctx.arc(cue.x, cue.y, cue.radius + 8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * powerPct);
+        ctx.strokeStyle = powerPct > 0.75 ? '#e05252' : '#e3b02b';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Angle + power readout near the cue ball.
+        const degrees = Math.round(((angle * 180) / Math.PI + 360) % 360);
+        ctx.font = '600 11px sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${degrees}° · ${Math.round(powerPct * 100)}%`, cue.x, cue.y - cue.radius - 14);
+
+        ctx.restore();
+    }
+
+    /**
+     * Small always-visible "english" (spin) picker in the corner of the
+     * table — tap/drag within it to apply side-spin to the next shot.
+     */
+    renderSpinWidget() {
+        const ctx = this.ctx;
+        const center = this.spinWidgetCenter();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, SPIN_WIDGET_RADIUS, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(10, 30, 43, 0.55)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Crosshair.
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(center.x - SPIN_WIDGET_RADIUS, center.y);
+        ctx.lineTo(center.x + SPIN_WIDGET_RADIUS, center.y);
+        ctx.moveTo(center.x, center.y - SPIN_WIDGET_RADIUS);
+        ctx.lineTo(center.x, center.y + SPIN_WIDGET_RADIUS);
+        ctx.stroke();
+
+        // Cue-ball miniature + spin dot.
+        ctx.beginPath();
+        ctx.arc(center.x, center.y, SPIN_WIDGET_RADIUS - 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#f4f4f4';
+        ctx.fill();
+
+        const dotX = center.x + this.spin.x * (SPIN_WIDGET_RADIUS - 10);
+        const dotY = center.y + this.spin.y * (SPIN_WIDGET_RADIUS - 10);
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#c94b3c';
+        ctx.fill();
+        ctx.restore();
     }
 
     destroy() {
         if (this.animationFrame) cancelAnimationFrame(this.animationFrame);
+        this.resizeObserver?.disconnect();
     }
 }

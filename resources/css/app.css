@@ -111,3 +111,23 @@
 button, a.btn-gold, a.btn-outline, a.btn-ghost, input[type="checkbox"], input[type="radio"] {
     touch-action: manipulation;
 }
+
+/* Game table fullscreen mode: fill the viewport and center the canvas,
+   letterboxing where needed to preserve the table's aspect ratio. Browsers
+   that can't lock orientation (notably iOS Safari) still benefit from this
+   — the player just rotates their device manually to get a landscape view. */
+:fullscreen, :-webkit-full-screen {
+    width: 100vw !important;
+    height: 100vh !important;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem !important;
+}
+
+:fullscreen canvas, :-webkit-full-screen canvas {
+    max-height: calc(100vh - 8rem);
+    aspect-ratio: 16 / 9;
+    width: auto !important;
+    margin: 0 auto;
+}

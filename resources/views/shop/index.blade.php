@@ -7,6 +7,8 @@
     </x-slot>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+        <x-ad-banner placement="banner" />
+
         @forelse ($products as $type => $items)
             <div data-aos="fade-up">
                 <h3 class="font-display text-lg font-semibold text-gold-200 mb-4">{{ ucwords(str_replace('_', ' ', $type)) }}s</h3>

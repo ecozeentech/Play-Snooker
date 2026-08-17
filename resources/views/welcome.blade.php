@@ -4,10 +4,11 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
         <meta name="theme-color" content="#0a1e2b">
-        <title>{{ config('app.name', 'Play Snooker') }} &mdash; Live Betting, Digital Pool &amp; Tournaments</title>
-        <meta name="description" content="Play Snooker bridges physical and digital snooker &amp; pool tournaments with live betting, social multiplayer and an in-game marketplace.">
+        <title>{{ $branding->name() }} &mdash; Live Betting, Digital Pool &amp; Tournaments</title>
+        <meta name="description" content="{{ $branding->description() }}">
 
         <link rel="manifest" href="/manifest.json">
+        <link rel="icon" href="{{ $branding->faviconUrl() ?? '/favicon.ico' }}">
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700|cinzel:600,700&display=swap" rel="stylesheet" />
 
@@ -19,8 +20,12 @@
 
             <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
                 <div class="flex items-center gap-2">
-                    <span class="text-3xl">🎱</span>
-                    <span class="font-display text-xl font-bold tracking-wide text-gold-300">Play Snooker</span>
+                    @if ($branding->logoUrl())
+                        <img src="{{ $branding->logoUrl() }}" alt="{{ $branding->name() }}" class="h-9 w-auto">
+                    @else
+                        <span class="text-3xl">🎱</span>
+                    @endif
+                    <span class="font-display text-xl font-bold tracking-wide text-gold-300">{{ $branding->name() }}</span>
                 </div>
                 <div class="flex items-center gap-3">
                     @auth
@@ -38,7 +43,7 @@
                     Where <span class="text-gold-300">Snooker</span> meets the future
                 </h1>
                 <p data-aos="fade-up" data-aos-delay="100" class="mt-6 max-w-2xl mx-auto text-lg text-baize-100/80">
-                    Compete in physical &amp; digital tournaments, bet live on real match flow, challenge players worldwide, and trade rare gear &mdash; all on one platform.
+                    {{ $branding->tagline() }}
                 </p>
                 <div data-aos="fade-up" data-aos-delay="200" class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
                     <a href="{{ route('register') }}" class="btn-gold px-8 py-3 text-base">Create free account</a>
@@ -64,8 +69,10 @@
                 @endforeach
             </section>
 
-            <footer class="border-t border-white/5 py-8 text-center text-xs text-baize-200/50">
-                &copy; {{ now()->year }} Play Snooker &middot; playsnooker.bet
+            <footer class="border-t border-white/5 py-8 text-center text-xs text-baize-200/50 space-x-3">
+                <span>&copy; {{ now()->year }} {{ $branding->name() }}</span>
+                <a href="{{ route('about') }}" class="hover:text-gold-300">About</a>
+                <a href="{{ route('contact') }}" class="hover:text-gold-300">Contact</a>
             </footer>
         </div>
     </body>
