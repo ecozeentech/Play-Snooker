@@ -1,12 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-2xl font-bold text-gold-200">{{ $match->player1?->name ?? 'TBD' }} vs {{ $match->player2?->name ?? 'TBD' }}</h2>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">{{ $match->player1?->name ?? 'TBD' }} vs {{ $match->player2?->name ?? 'TBD' }}</h2>
             <span class="badge {{ $match->status === 'live' ? 'bg-red-500/20 text-red-300' : 'bg-white/10' }}">{{ ucfirst($match->status) }}</span>
         </div>
     </x-slot>
-
-    @vite('resources/js/game/multiplayer.js')
 
     <div
         class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid lg:grid-cols-3 gap-6"
@@ -19,22 +17,27 @@
         })"
     >
         <div class="lg:col-span-2 space-y-4">
-            <template x-if="isMyTurn">
-                <div class="glass-panel p-3 sm:p-6">
-                    <p class="text-center text-sm text-gold-200 mb-3" x-text="message"></p>
-                    <canvas x-ref="canvas" class="w-full aspect-[16/9] rounded-xl touch-none select-none" style="touch-action: none;"></canvas>
-                    <div class="mt-3 flex justify-center">
-                        <button type="button" class="btn-outline text-xs" @click="concedeFrame()">Concede this frame</button>
-                    </div>
+            {{--
+                x-show (not x-if/template) is used here deliberately: it keeps
+                the canvas permanently in the DOM (just toggling CSS display),
+                so `x-ref="canvas"` is always resolvable the instant the Alpine
+                component initializes. With x-if, the canvas wouldn't exist in
+                the DOM yet at that point (x-init runs before x-if is
+                evaluated), so `this.$refs.canvas` would be undefined and the
+                table would silently fail to render.
+            --}}
+            <div class="glass-panel p-3 sm:p-6" x-show="isMyTurn">
+                <p class="text-center text-sm text-gold-200 mb-3" x-text="message"></p>
+                <canvas x-ref="canvas" class="w-full aspect-[16/9] rounded-xl touch-none select-none" style="touch-action: none;"></canvas>
+                <div class="mt-3 flex justify-center">
+                    <button type="button" class="btn-outline text-xs" @click="concedeFrame()">Concede this frame</button>
                 </div>
-            </template>
+            </div>
 
-            <template x-if="!isMyTurn">
-                <div class="glass-panel p-10 text-center">
-                    <p class="text-3xl mb-3">🎱</p>
-                    <p class="text-baize-100/80" x-text="message"></p>
-                </div>
-            </template>
+            <div class="glass-panel p-10 text-center" x-show="!isMyTurn">
+                <p class="text-3xl mb-3">🎱</p>
+                <p class="text-baize-100/80" x-text="message"></p>
+            </div>
 
             <!-- Frame score -->
             <div class="glass-card p-5 flex items-center justify-between">

@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="font-display text-2xl font-bold text-gold-200">{{ $tournament->name }}</h2>
+                <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">{{ $tournament->name }}</h2>
                 <p class="text-sm text-baize-200/60">{{ ucfirst($tournament->type) }} &middot; {{ ucwords(str_replace('_', ' ', $tournament->format)) }} &middot; Hosted by {{ $tournament->creator?->name ?? 'Play Snooker' }}</p>
             </div>
             <span class="badge {{ match($tournament->status) {

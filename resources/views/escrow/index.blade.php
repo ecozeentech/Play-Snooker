@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-2xl font-bold text-gold-200">Marketplace</h2>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Marketplace</h2>
             <div class="flex gap-2">
                 <a href="{{ route('escrow.mine') }}" class="btn-outline">My listings</a>
                 <a href="{{ route('escrow.create') }}" class="btn-gold">List an item</a>

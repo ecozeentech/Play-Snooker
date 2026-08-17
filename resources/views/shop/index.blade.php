@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-2xl font-bold text-gold-200">Shop</h2>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Shop</h2>
             <a href="{{ route('shop.inventory') }}" class="btn-outline">My inventory</a>
         </div>
     </x-slot>

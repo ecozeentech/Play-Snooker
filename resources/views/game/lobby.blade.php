@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-2xl font-bold text-gold-200">Game Lobby</h2>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Game Lobby</h2>
             <a href="{{ route('game.practice') }}" class="btn-gold">Practice mode</a>
         </div>
     </x-slot>

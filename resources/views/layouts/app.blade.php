@@ -24,7 +24,15 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans antialiased bg-baize-950 text-baize-50">
+        <noscript>
+            <div class="bg-red-900/80 text-red-100 text-sm text-center py-2 px-4">
+                JavaScript is disabled or failed to load — the digital game engine, live odds and menus that need it won't work. Every other page (dashboard, tournaments, shop, wallet) still works normally.
+            </div>
+        </noscript>
+
         <div class="min-h-screen bg-baize-felt bg-fixed">
+            <div class="ambient-glow" aria-hidden="true"></div>
+
             @include('layouts.navigation')
 
             <!-- Page Heading -->
@@ -53,11 +61,11 @@
             @endif
 
             <!-- Page Content -->
-            <main class="pb-16">
+            <main class="pb-24 lg:pb-16">
                 {{ $slot }}
             </main>
 
-            <footer class="border-t border-white/5 py-8 text-center text-xs text-baize-200/50">
+            <footer class="hidden lg:block border-t border-white/5 py-8 text-center text-xs text-baize-200/50">
                 &copy; {{ now()->year }} Play Snooker &middot; playsnooker.bet
             </footer>
         </div>

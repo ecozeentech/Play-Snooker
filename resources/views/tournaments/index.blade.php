@@ -1,20 +1,20 @@
 <x-app-layout>
     <x-slot name="header">
         <div class="flex items-center justify-between">
-            <h2 class="font-display text-2xl font-bold text-gold-200">Tournaments</h2>
+            <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Tournaments</h2>
             <a href="{{ route('tournaments.create') }}" class="btn-gold">Host a tournament</a>
         </div>
     </x-slot>
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <form method="GET" class="flex flex-wrap gap-3">
-            <select name="status" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
+            <select name="status" aria-label="Filter by status" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
                 <option value="">All statuses</option>
                 @foreach (['upcoming', 'ongoing', 'finished', 'cancelled'] as $status)
                     <option value="{{ $status }}" @selected(request('status') === $status)>{{ ucfirst($status) }}</option>
                 @endforeach
             </select>
-            <select name="type" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
+            <select name="type" aria-label="Filter by type" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
                 <option value="">All types</option>
                 <option value="digital" @selected(request('type') === 'digital')>Digital</option>
                 <option value="physical" @selected(request('type') === 'physical')>Physical</option>

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-2xl font-bold text-gold-200">My Bets</h2>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">My Bets</h2>
     </x-slot>
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-4">

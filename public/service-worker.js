@@ -8,7 +8,7 @@
  * network first since they depend on fresh, personalized server data.
  */
 
-const CACHE_VERSION = 'play-snooker-v1';
+const CACHE_VERSION = 'play-snooker-v2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const PAGE_CACHE = `${CACHE_VERSION}-pages`;
 
@@ -91,7 +91,7 @@ self.addEventListener('fetch', (event) => {
 
                 try {
                     const response = await fetch(request);
-                    cache.put(request, response.clone());
+                    cache.put(request, response.clone()).catch(() => {});
                     return response;
                 } catch (error) {
                     return cached || Response.error();
@@ -108,7 +108,18 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    caches.open(PAGE_CACHE).then((cache) => cache.put(request, response.clone()));
+                    // Clone synchronously, before returning the original response
+                    // to the browser — if this were done inside the async
+                    // `caches.open().then(...)` callback below, the browser could
+                    // already be reading the original response's body by the time
+                    // that callback runs, and `clone()` throws once a response
+                    // body has started being consumed.
+                    const responseToCache = response.clone();
+
+                    caches.open(PAGE_CACHE)
+                        .then((cache) => cache.put(request, responseToCache))
+                        .catch(() => {});
+
                     return response;
                 })
                 .catch(async () => {

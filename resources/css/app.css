@@ -10,12 +10,16 @@
     body {
         @apply bg-baize-950 text-baize-50;
     }
+
+    main {
+        animation: page-fade-in 0.45s ease-out;
+    }
 }
 
 @layer components {
     /* Glassmorphism card used throughout dashboards, shop, tournaments, etc. */
     .glass-card {
-        @apply relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl shadow-black/20;
+        @apply relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl shadow-xl shadow-black/20 transition duration-200 hover:border-white/20 hover:shadow-2xl hover:shadow-black/30;
     }
 
     .glass-panel {
@@ -23,11 +27,11 @@
     }
 
     .btn-gold {
-        @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-600 px-5 py-2.5 min-h-[44px] text-sm font-semibold text-baize-950 shadow-glow transition hover:from-gold-300 hover:to-gold-500 focus:outline-none focus:ring-2 focus:ring-gold-300 focus:ring-offset-2 focus:ring-offset-baize-950 disabled:cursor-not-allowed disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-gold-400 to-gold-600 px-5 py-2.5 min-h-[44px] text-sm font-semibold text-baize-950 shadow-glow transition duration-150 hover:from-gold-300 hover:to-gold-500 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-gold-300 focus:ring-offset-2 focus:ring-offset-baize-950 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0;
     }
 
     .btn-outline {
-        @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-2.5 min-h-[44px] text-sm font-semibold text-baize-50 transition hover:border-gold-400 hover:text-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-300 focus:ring-offset-2 focus:ring-offset-baize-950;
+        @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/20 px-5 py-2.5 min-h-[44px] text-sm font-semibold text-baize-50 transition duration-150 hover:border-gold-400 hover:text-gold-300 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-gold-300 focus:ring-offset-2 focus:ring-offset-baize-950;
     }
 
     .btn-ghost {
@@ -36,6 +40,15 @@
 
     .badge {
         @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold uppercase tracking-wide;
+    }
+
+    /* Gradient headline used for page titles across the app. */
+    .heading-gradient {
+        @apply bg-gradient-to-r from-gold-200 via-gold-300 to-gold-500 bg-clip-text text-transparent;
+    }
+
+    .stat-tile {
+        @apply glass-card p-5 flex flex-col gap-1;
     }
 
     .form-input-dark {
@@ -61,6 +74,37 @@
     100% {
         transform: translateX(100%);
     }
+}
+
+@keyframes page-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Soft ambient glow blobs used behind the main content for a premium,
+   modern feel without any extra imagery/JS. */
+.ambient-glow {
+    @apply pointer-events-none fixed inset-0 overflow-hidden -z-10;
+}
+
+.ambient-glow::before,
+.ambient-glow::after {
+    content: '';
+    @apply absolute rounded-full blur-3xl opacity-20;
+}
+
+.ambient-glow::before {
+    @apply -top-24 -left-24 h-96 w-96 bg-gold-500;
+}
+
+.ambient-glow::after {
+    @apply top-1/3 -right-24 h-[28rem] w-[28rem] bg-baize-400;
 }
 
 /* Ensure all interactive touch targets meet the 44px minimum size requirement on mobile. */

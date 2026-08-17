@@ -7,8 +7,6 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.js',
-                'resources/js/game/practice.js',
-                'resources/js/game/multiplayer.js',
             ],
             refresh: true,
         }),

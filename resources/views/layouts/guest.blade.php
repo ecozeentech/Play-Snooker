@@ -19,6 +19,7 @@
     </head>
     <body class="font-sans text-baize-50 antialiased">
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0 bg-baize-felt bg-fixed px-4">
+            <div class="ambient-glow" aria-hidden="true"></div>
             <a href="/" class="flex items-center gap-2">
                 <span class="text-4xl">🎱</span>
                 <span class="font-display text-2xl font-bold tracking-wide text-gold-300">Play Snooker</span>

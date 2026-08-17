@@ -59,11 +59,29 @@ export class PoolEngine {
     resize() {
         const rect = this.canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
+
+        // If the canvas is measured before its container has finished
+        // laying out (e.g. right after an Alpine x-show/x-if toggle, or on
+        // very fast page loads before the aspect-ratio CSS has applied),
+        // getBoundingClientRect() can briefly report 0x0. Fall back to a
+        // sane default so the table still renders, then self-correct once
+        // real layout is available.
+        const width = rect.width > 0 ? rect.width : (this.canvas.parentElement?.clientWidth || 800);
+        const height = rect.height > 0 ? rect.height : Math.round(width * (9 / 16));
+
+        this.canvas.width = width * dpr;
+        this.canvas.height = height * dpr;
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this.width = rect.width;
-        this.height = rect.height;
+        this.width = width;
+        this.height = height;
+
+        if (rect.width === 0) {
+            requestAnimationFrame(() => {
+                this.resize();
+                this.setupPockets();
+                this.render();
+            });
+        }
     }
 
     setupPockets() {

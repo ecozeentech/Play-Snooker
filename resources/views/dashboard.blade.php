@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-2xl font-bold text-gold-200 leading-tight">
+        <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient leading-tight">
             Welcome back, {{ auth()->user()->name }}
         </h2>
     </x-slot>

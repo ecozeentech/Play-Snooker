@@ -15,6 +15,8 @@
     </head>
     <body class="font-sans antialiased bg-baize-950 text-baize-50">
         <div class="min-h-screen bg-baize-felt bg-fixed">
+            <div class="ambient-glow" aria-hidden="true"></div>
+
             <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <span class="text-3xl">🎱</span>

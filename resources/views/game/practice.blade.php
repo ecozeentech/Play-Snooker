@@ -1,9 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-2xl font-bold text-gold-200">Practice Mode</h2>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Practice Mode</h2>
     </x-slot>
-
-    @vite('resources/js/game/practice.js')
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8" x-data="practiceGame()">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">

@@ -1,6 +1,6 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-display text-2xl font-bold text-gold-200">Wallet</h2>
+        <h2 class="font-display text-2xl sm:text-3xl font-bold heading-gradient">Wallet</h2>
     </x-slot>
 
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -16,8 +16,8 @@
 
         <form method="POST" action="{{ route('wallet.currency') }}" class="flex items-center gap-3">
             @csrf
-            <label class="text-sm text-baize-200/70">Display currency</label>
-            <select name="currency" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
+            <label for="display-currency" class="text-sm text-baize-200/70">Display currency</label>
+            <select id="display-currency" name="currency" onchange="this.form.submit()" class="form-input-dark min-h-[44px] w-auto">
                 @foreach ($supportedCurrencies as $currency)
                     <option value="{{ $currency }}" @selected(auth()->user()->currency_preference === $currency)>{{ $currency }}</option>
                 @endforeach
