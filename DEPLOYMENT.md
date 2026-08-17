@@ -155,18 +155,117 @@ hPanel → **Advanced → Cron Jobs** → add two jobs, both running every minut
 3. Log in at `/admin` with `admin@playsnooker.bet` / `password`, then **immediately change that password** from your account settings (or Filament's user edit screen).
 4. Register a normal player account and confirm the dashboard, shop, tournaments and practice-mode game engine all load.
 
-## Redeploying after future changes
+## Updating an existing deployment
+
+Whenever `main` gets new commits (new features, bug fixes, etc.), bring your live site up to date with these steps. This app changes fairly often (new migrations, new Blade/CSS/JS, new admin pages), so don't skip steps just because a past update didn't need them.
+
+### 1. Back up first
+
+Do this before every update — it takes two minutes and saves you if anything goes wrong:
+
+- hPanel → **Files → Backups**, or manually export the database: hPanel → **Databases → phpMyAdmin** → select your database → **Export** → "Quick" → Go.
+- Optionally zip the app folder too: `cd ~/domains/yourdomain.com && zip -r playsnooker-backup-$(date +%F).zip playsnooker -x 'playsnooker/vendor/*' -x 'playsnooker/node_modules/*'`.
+
+### 2. Rebuild the frontend assets locally
+
+Every update to this app may include Blade/CSS/JS changes, and the compiled bundle isn't committed to git by default — rebuild and re-include it before pulling on the server:
+
+```bash
+# on your own computer, in your local clone of the repo
+git pull
+npm install          # picks up any new/updated npm packages (e.g. @tailwindcss/typography)
+npm run build         # regenerates public/build/** with fresh, correctly-hashed filenames
+
+# re-include the build output for this deploy (same one-time trick as initial setup)
+git add -A
+git commit -m "chore: rebuild frontend assets for deploy"
+git push
+```
+
+If you're not tracking `public/build` in git, instead upload the freshly-built `public/build` folder to the server over SFTP after step 4 below, replacing the old one entirely (don't merge old + new — stale hashed filenames left behind are harmless but pointless clutter).
+
+### 3. Put the site in maintenance mode (recommended for anything beyond a trivial fix)
 
 ```bash
 ssh -p 65002 u123456789@yourdomain.com
 cd ~/domains/yourdomain.com/playsnooker
+php artisan down --retry=60
+```
+
+### 4. Pull the update and reinstall dependencies
+
+```bash
+git pull
+composer2 install --optimize-autoloader --no-dev
+```
+
+### 5. Run new database migrations
+
+```bash
+php artisan migrate --force
+```
+
+This is safe to run on every update even if there's nothing new to migrate — Laravel skips migrations that already ran. Never skip this step: forgetting it after an update that adds a column (e.g. the cue-appearance colors) causes "Unknown column" SQL errors on the pages that use it.
+
+### 6. Re-check the storage symlink (needed for logo/favicon/ad-banner uploads)
+
+If admins upload a logo, favicon, or ad banner image through `/admin`, those files are served through the `public/storage` symlink. Confirm it's still there (updates don't normally remove it, but it's worth a 5-second check):
+
+```bash
+ls -la public/storage
+```
+
+If it's missing, recreate it manually (Hostinger disables PHP's `symlink()`, so `php artisan storage:link` won't work — see step 10 of the initial setup guide above):
+
+```bash
+ln -s ~/domains/yourdomain.com/playsnooker/storage/app/public \
+      ~/domains/yourdomain.com/playsnooker/public/storage
+```
+
+### 7. Clear and rebuild every cache
+
+This is the step people most often forget, and the most common cause of "I updated but nothing changed" or new pages/admin sections 404ing:
+
+```bash
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+php artisan event:cache
+```
+
+(`optimize:clear` clears the old config/route/view/event/compiled caches in one go before the four `*:cache` commands rebuild them fresh — running only the `*:cache` commands without clearing first can leave stale entries mixed in.)
+
+### 8. Bring the site back up and verify
+
+```bash
+php artisan up
+```
+
+Then check, ideally in a private/incognito window (to avoid a stale service worker or browser cache hiding a problem):
+
+- The homepage loads and shows the right title/branding.
+- Log in as a normal player: dashboard, tournaments, shop, wallet, and `/play/practice` (the pool table should render and respond to drag input) all work.
+- Log in as an admin: `/admin` loads, and if this update added new admin sections (e.g. **Platform Settings**, **Advertising → Ad Banners**), confirm they appear in the sidebar and open without errors.
+- If you're a returning visitor and something looks stale (old logo, old layout), hard-refresh once (Ctrl/Cmd+Shift+R) or clear the site's service worker (DevTools → Application → Service Workers → Unregister) — this app caches pages/assets for offline practice mode, so a browser that visited before the update may show a cached copy until it re-fetches.
+
+### Quick reference (once you've done the full walkthrough once)
+
+```bash
+# locally: rebuild assets and push
+npm install && npm run build && git add -A && git commit -m "chore: rebuild assets" && git push
+
+# on the server
+ssh -p 65002 u123456789@yourdomain.com
+cd ~/domains/yourdomain.com/playsnooker
+php artisan down --retry=60
 git pull
 composer2 install --optimize-autoloader --no-dev
 php artisan migrate --force
+php artisan optimize:clear
 php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache
+php artisan up
 ```
-
-If you changed any Blade/CSS/JS, rebuild locally (`npm run build`), commit the updated `public/build` folder (per step 4), then `git pull` on the server as above.
 
 ## Troubleshooting: "the game board / nav dropdown / logout doesn't work"
 
